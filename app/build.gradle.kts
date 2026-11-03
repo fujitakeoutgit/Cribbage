@@ -23,6 +23,13 @@ android {
     buildFeatures {
         compose = true
     }
+
+    buildTypes {
+        release {
+            // Sideloaded only, so the debug key is enough. Release keeps the search fast.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
 }
 
 dependencies {

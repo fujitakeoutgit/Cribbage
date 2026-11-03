@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A rail of pegging ticks, with the fifteen and thirty-one marks standing tall. -->
+    <path android:fillColor="#3A4150" android:pathData="M34,50h3v8h-3zM41,50h3v8h-3zM55,50h3v8h-3zM62,50h3v8h-3z" />
+    <path android:fillColor="#C8F04B" android:pathData="M48,38h3v32h-3zM69,34h4v40h-4z" />
+</vector>
