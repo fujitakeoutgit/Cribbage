@@ -85,9 +85,9 @@ fun PeggingScreen(ui: UiState, onPlay: (Card) -> Unit, onContinue: () -> Unit) {
 @Composable
 private fun TopLine(ui: UiState, peg: PeggingState) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Tally("You", peg.pegged[YOU])
+        Tally("You", ui.scores[YOU])
         Spacer(Modifier.width(24.dp))
-        Tally("Computer", peg.pegged[COMPUTER])
+        Tally("Computer", ui.scores[COMPUTER])
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.End) {
             Eyebrow("Starter")

@@ -38,7 +38,7 @@ class SimulationTest {
     @Test fun `full hands run from deal to count with real evaluators`() {
         val rng = Random(32)
         repeat(300) {
-            val game = HandGame(rng, DealCut.draw(rng), tables)
+            val game = HandGame(rng, rng.nextBoolean(), listOf(0, 0), DiscardMemo(tables))
             val report = game.discard(game.yourSix.shuffled(rng).take(2))
             assertEquals(15, report.options.size)
             assertTrue(report.rank in 1..15)

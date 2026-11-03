@@ -47,10 +47,6 @@ object Ink {
     val OnAccent = Color(0xFF12150A)
     val Amber = Color(0xFFF5B342)
     val Red = Color(0xFFFF6B5C)
-    val CardFace = Color(0xFFF4F1EA)
-    val CardInk = Color(0xFF15171B)
-    val CardRed = Color(0xFFD23B2A)
-    val CardBack = Color(0xFF232833)
 }
 
 val Mono = FontFamily(

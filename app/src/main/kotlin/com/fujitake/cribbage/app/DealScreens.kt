@@ -1,6 +1,8 @@
 package com.fujitake.cribbage.app
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,31 +11,66 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import com.fujitake.cribbage.engine.COMPUTER
 import com.fujitake.cribbage.engine.Card
+import com.fujitake.cribbage.engine.GAME_TARGET
+import com.fujitake.cribbage.engine.YOU
 
 fun cribOwner(ui: UiState) = if (ui.youDeal) "Your crib" else "Computer's crib"
 
 @Composable
+private fun ScoreLine(label: String, score: Int, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Eyebrow(label, Modifier.width(84.dp))
+        Box(Modifier.weight(1f).height(4.dp).background(Ink.Hairline, RoundedCornerShape(2.dp))) {
+            if (score > 0) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(score.toFloat() / GAME_TARGET)
+                        .height(4.dp)
+                        .background(color, RoundedCornerShape(2.dp)),
+                )
+            }
+        }
+        Txt("$score", Modifier.width(40.dp), size = 14, family = Mono, weight = FontWeight.Bold, align = TextAlign.End)
+    }
+}
+
+/** The running game score, racing to the target. */
+@Composable
+fun ScoreStrip(scores: List<Int>, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ScoreLine("You", scores[YOU], Ink.Accent)
+        ScoreLine("Computer", scores[COMPUTER], Ink.Muted)
+    }
+}
+
+@Composable
 fun CutScreen(ui: UiState, onDeal: () -> Unit) {
+    val cut = requireNotNull(ui.cut)
     Column(Modifier.fillMaxSize().padding(20.dp)) {
-        Eyebrow("Hand ${ui.handNumber}")
+        Eyebrow("New game")
         Txt("Cut for deal", Modifier.padding(top = 8.dp), size = 32, family = Mono, weight = FontWeight.Light)
-        Txt("The lower card deals and owns the crib.", Modifier.padding(top = 6.dp), color = Ink.Muted)
+        Txt("The lower card deals first, then the deal alternates.", Modifier.padding(top = 6.dp), color = Ink.Muted)
 
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                FlipCard(ui.cut.yours, 118.dp, delayMs = 250)
+                FlipCard(cut.yours, 118.dp, delayMs = 250)
                 Eyebrow("You", Modifier.padding(top = 12.dp))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                FlipCard(ui.cut.computers, 118.dp, delayMs = 500)
+                FlipCard(cut.computers, 118.dp, delayMs = 500)
                 Eyebrow("Computer", Modifier.padding(top = 12.dp))
             }
         }
@@ -69,6 +106,7 @@ fun DiscardScreen(ui: UiState, onToggle: (Card) -> Unit, onThrow: () -> Unit) {
             Modifier.padding(top = 6.dp),
             color = Ink.Muted,
         )
+        if (ui.fullGame) ScoreStrip(ui.scores, Modifier.padding(top = 16.dp))
 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val gap = 12.dp

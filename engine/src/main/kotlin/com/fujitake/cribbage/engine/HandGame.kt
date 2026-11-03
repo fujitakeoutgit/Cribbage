@@ -39,34 +39,43 @@ data class PlayReport(
     val forced: Boolean get() = grade == null
 }
 
-/** A hand counted at the show. */
+/** A hand counted at the show. [items] stops at the combination that wins the game, if one does. */
 data class HandCount(val seat: Int, val crib: Boolean, val cards: List<Card>, val items: List<ScoreItem>) {
     val points: Int get() = items.sumOf { it.points }
 }
 
 data class HandResult(
+    /** The counts actually reached, in order. Empty if the game ended before the show. */
     val counts: List<HandCount>,
     val pegged: List<Int>,
     val heels: Int,
+    /** Points each seat scored this hand. */
     val totals: List<Int>,
+    /** Game scores after this hand. */
+    val scores: List<Int>,
 )
 
 /**
- * One deal from cut to count. Seat views handed to the computer are built only from what it can
- * see, so it can't peek at your hand or the starter.
+ * One deal from cut to count, within a game that started the hand on [startScores]. Seat views
+ * handed to the computer are built only from what it can see, so it can't peek at your hand or
+ * the starter.
  */
 class HandGame(
     random: Random,
-    val cut: DealCut,
-    private val tables: DiscardTables = DiscardTables.bundled,
+    val youDeal: Boolean,
+    private val startScores: List<Int>,
+    private val memo: DiscardMemo,
 ) {
+    private val tables = memo.tables
     private val deck = FULL_DECK.shuffled(random)
     val yourSix: List<Card> = deck.take(6).sorted()
     private val computerSix: List<Card> = deck.drop(6).take(6)
     private val hiddenStarter: Card = deck[12]
 
-    val youDeal: Boolean get() = cut.youDeal
     private val dealerSeat: Int get() = if (youDeal) YOU else COMPUTER
+
+    /** The rank of the starter still to be cut. Only for setting up tests. */
+    internal val nextStarterRank: Int get() = hiddenStarter.rank
 
     private lateinit var computerChoice: DiscardEval
     lateinit var yourKeep: List<Card>
@@ -81,15 +90,33 @@ class HandGame(
     lateinit var pegging: PeggingState
         private set
 
+    private val heels: Int get() = if (starter?.rank == 11) 2 else 0
+
+    /** Game scores right now, counting pegging and heels but not the show. */
+    val scores: List<Int>
+        get() = listOf(YOU, COMPUTER).map { seat ->
+            val pegged = if (::pegging.isInitialized) pegging.pegged[seat] else 0
+            val heelsPoints = if (seat == dealerSeat) heels else 0
+            minOf(startScores[seat] + pegged + heelsPoints, GAME_TARGET)
+        }
+
+    /** True once someone has reached the target. */
+    val over: Boolean get() = scores.any { it >= GAME_TARGET }
+
+    /** True while cards are still to be played. */
+    val inPlay: Boolean get() = !over && !pegging.finished
+
+    fun bestDiscard(): List<Card> = memo.rank(yourSix, youDeal).first().discard
+
     /** Ranks your choice against all 15 options and makes the computer's own discard. */
     fun discard(two: List<Card>): DiscardReport {
         require(two.size == 2 && yourSix.containsAll(two))
-        val options = DiscardAnalysis.rank(yourSix, youDeal, tables)
+        val options = memo.rank(yourSix, youDeal)
         val chosen = options.first { it.discard == two.sorted() }
         val rank = options.indexOf(chosen) + 1
         val lost = options.first().total(youDeal) - chosen.total(youDeal)
 
-        computerChoice = Computer.discard(computerSix, !youDeal, tables)
+        computerChoice = memo.rank(computerSix, !youDeal).first()
         yourKeep = chosen.keep
         yourDiscard = chosen.discard
         crib = chosen.discard + computerChoice.discard
@@ -104,12 +131,12 @@ class HandGame(
         return heels
     }
 
-    private val heels: Int get() = if (hiddenStarter.rank == 11) 2 else 0
-
     private fun view(seat: Int): SeatView {
         val discards = if (seat == YOU) yourDiscard else computerChoice.discard
         return SeatView.of(pegging, seat, seat == dealerSeat, discards, hiddenStarter)
     }
+
+    fun bestPlay(): Card = Computer.play(view(YOU), tables)
 
     /** Grades your card on what you could see, then plays it. */
     fun playYourCard(card: Card): PlayReport {
@@ -129,27 +156,37 @@ class HandGame(
         pegging = pegging.play(Computer.play(view(COMPUTER), tables))
     }
 
+    /** Counts the show in order, non-dealer first, stopping as soon as someone wins. */
     fun result(): HandResult {
         val theStarter = requireNotNull(starter)
         val pone = 1 - dealerSeat
-        val counts = listOf(
+        val inOrder = listOf(
             HandCount(pone, false, fullHands[pone], Scoring.breakdown(fullHands[pone], theStarter, false)),
             HandCount(dealerSeat, false, fullHands[dealerSeat], Scoring.breakdown(fullHands[dealerSeat], theStarter, false)),
             HandCount(dealerSeat, true, crib, Scoring.breakdown(crib, theStarter, true)),
         )
+        val running = scores.toMutableList()
+        val counted = mutableListOf<HandCount>()
+        for (count in inOrder) {
+            if (running.any { it >= GAME_TARGET }) break
+            val items = mutableListOf<ScoreItem>()
+            for (item in count.items) {
+                items += item
+                running[count.seat] = minOf(running[count.seat] + item.points, GAME_TARGET)
+                if (running[count.seat] >= GAME_TARGET) break
+            }
+            counted += count.copy(items = items)
+        }
         val totals = listOf(YOU, COMPUTER).map { seat ->
-            pegging.pegged[seat] + counts.filter { it.seat == seat }.sumOf { it.points } +
+            pegging.pegged[seat] + counted.filter { it.seat == seat }.sumOf { it.points } +
                 if (seat == dealerSeat) heels else 0
         }
-        return HandResult(counts, pegging.pegged, heels, totals)
+        return HandResult(counted, pegging.pegged, heels, totals, running)
     }
 }
 
 /** The computer always takes the top-valued option from the shared evaluators. */
 object Computer {
-    fun discard(six: List<Card>, dealer: Boolean, tables: DiscardTables): DiscardEval =
-        DiscardAnalysis.rank(six, dealer, tables).first()
-
     fun play(view: SeatView, tables: DiscardTables): Card =
         PeggingSearch.evaluate(view, tables).first().card
 }

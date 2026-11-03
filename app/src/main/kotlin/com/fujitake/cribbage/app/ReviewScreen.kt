@@ -190,10 +190,9 @@ private fun Num(text: String, color: Color, weight: FontWeight = FontWeight.Norm
 /** A card written inline as rank and suit. */
 @Composable
 fun MiniCard(card: Card, color: Color = Ink.Text, size: Int = 14) {
-    val red = card.suit == 1 || card.suit == 2
     Row(verticalAlignment = Alignment.CenterVertically) {
         Txt(card.rankLabel, size = size, family = Mono, weight = FontWeight.Bold, color = color)
-        SuitGlyph(card.suit, size.dp - 2.dp, Modifier.padding(start = 2.dp), color = if (red) Ink.Red else Ink.Text)
+        SuitGlyph(card.suit, size.dp - 2.dp, Modifier.padding(start = 2.dp), color = LocalFaceStyle.current.inkOnDark(card.suit))
     }
 }
 

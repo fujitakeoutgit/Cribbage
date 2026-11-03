@@ -1,8 +1,14 @@
 # Cribbage Coach
 
-An offline Android trainer for the best play on a single hand of two-player, six-card cribbage.
-Each hand grades your discard against all 15 options, then grades every pegging card you had a
-real choice on, using only what you could see at the time.
+An offline Android trainer for two-player, six-card cribbage. Every hand grades your discard
+against all 15 options, then grades every pegging card you had a real choice on, using only what
+you could see at the time.
+
+- **Your crib / Their crib:** repeating single-hand drills as the dealer or the non-dealer.
+- **Full game:** play the computer to 121. The game saves after every decision, so Continue picks
+  up exactly where you left off. The final screen replays your game with the same deals and the
+  top-graded choice every time, to show the score perfect play would have reached.
+- **Settings:** card face and card back styles.
 
 ## Layout
 
@@ -35,8 +41,13 @@ how often each rank is kept and filtered by any go they've said. Each is then se
 of the hand with both sides' cards face up. That makes verdicts repeatable, but the face-up search
 is a model of real play rather than a proven solution, so pegging values are strong estimates.
 
-Scores near the end of a real game can change the right play. This app only ever maximises the
-current hand.
+Scores near the end of a real game can change the right play. Grades only ever maximise the
+current hand, even in a full game, so "perfect play" means the top-graded choice each time rather
+than score-aware strategy.
+
+Deals come from a seed and the hand number, and the computer is deterministic. That is what makes
+both the perfect-play replay and saved games work: a save holds the seed, the scores and your
+choices so far this hand, and restoring replays them.
 
 ## Fonts
 

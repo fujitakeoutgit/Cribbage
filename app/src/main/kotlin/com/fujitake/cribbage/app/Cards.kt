@@ -53,7 +53,7 @@ fun cardName(card: Card): String {
 /** Suits are drawn, not typed, because some fonts render them as emoji. */
 @Composable
 fun SuitGlyph(suit: Int, size: Dp, modifier: Modifier = Modifier, color: Color? = null) {
-    val ink = color ?: if (suit == 1 || suit == 2) Ink.CardRed else Ink.CardInk
+    val ink = color ?: LocalFaceStyle.current.ink(suit)
     Canvas(modifier.size(size)) { drawSuit(suit, ink) }
 }
 
@@ -123,14 +123,16 @@ fun CardFace(
         label = "lift",
     )
     val fade by animateFloatAsState(if (dimmed) 0.38f else 1f, tween(200), label = "dim")
-    val ink = if (card.suit == 1 || card.suit == 2) Ink.CardRed else Ink.CardInk
+    val style = LocalFaceStyle.current
+    val ink = style.ink(card.suit)
     Box(
         modifier
             .offset(y = lift)
             .graphicsLayer { alpha = fade }
             .width(width)
             .height(width * CARD_ASPECT)
-            .background(Ink.CardFace, shape)
+            .background(style.face, shape)
+            .then(if (style.outlined) Modifier.border(1.dp, Ink.Hairline, shape) else Modifier)
             .then(if (selected) Modifier.border(2.5.dp, Ink.Accent, shape) else Modifier)
             .clearAndSetSemantics {
                 contentDescription = cardName(card) + if (selected) ", selected" else ""
@@ -165,11 +167,12 @@ fun CardFace(
 @Composable
 fun CardBack(width: Dp, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(width * 0.1f)
+    val style = LocalBackStyle.current
     Canvas(
         modifier
             .width(width)
             .height(width * CARD_ASPECT)
-            .background(Ink.CardBack, shape)
+            .background(style.color, shape)
             .border(1.dp, Ink.Hairline, shape),
     ) {
         val inset = size.width * 0.14f
@@ -178,7 +181,7 @@ fun CardBack(width: Dp, modifier: Modifier = Modifier) {
         val area = Size(size.width - inset * 2, size.height - inset * 2)
         var x = 0f
         while (x <= area.width) {
-            drawLine(Color(0x33C8F04B), Offset(top.x + x, top.y), Offset(top.x + x, top.y + area.height), 1.5f)
+            drawLine(style.line, Offset(top.x + x, top.y), Offset(top.x + x, top.y + area.height), 1.5f)
             x += step
         }
     }
