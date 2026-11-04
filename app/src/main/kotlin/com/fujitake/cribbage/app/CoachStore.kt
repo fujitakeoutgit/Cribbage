@@ -1,11 +1,23 @@
 package com.fujitake.cribbage.app
 
 import android.content.Context
+import com.fujitake.cribbage.engine.HandRecord
 import com.fujitake.cribbage.engine.SavedGame
+import java.io.File
 
-/** Everything kept between launches: the card styles and the game in progress. */
+/** Everything kept between launches: card styles, the game in progress and your hand history. */
 class CoachStore(context: Context) {
     private val prefs = context.getSharedPreferences("coach", Context.MODE_PRIVATE)
+    private val historyFile = File(context.filesDir, "history.csv")
+
+    fun records(): List<HandRecord> =
+        if (historyFile.exists()) HandRecord.parseAll(historyFile.readText()) else emptyList()
+
+    fun addRecord(record: HandRecord) = historyFile.appendText(record.serialize() + "\n")
+
+    fun clearRecords() {
+        historyFile.delete()
+    }
 
     var face: FaceStyle
         get() = FaceStyle.entries.firstOrNull { it.name == prefs.getString(FACE, null) } ?: FaceStyle.IVORY

@@ -8,7 +8,13 @@ you could see at the time.
 - **Full game:** play the computer to 121. The game saves after every decision, so Continue picks
   up exactly where you left off. The final screen replays your game with the same deals and the
   top-graded choice every time, to show the score perfect play would have reached.
-- **Settings:** card face and card back styles.
+- **Profile:** your skill rating, accuracy (the share of decisions that matched the top choice,
+  overall and for discards and pegging), charts of both over time and your recent hands.
+- **Settings:** card face and card back styles, and a two-tap reset of your stats.
+
+The skill rating starts at 1000. Each finished hand counts as a performance of 1500 minus 250 per
+expected point given up, and the rating moves 5% of the way toward it, so it settles at your
+typical play. Hands are kept in `history.csv` in the app's private storage.
 
 ## Layout
 

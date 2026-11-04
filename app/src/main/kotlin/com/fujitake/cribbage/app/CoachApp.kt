@@ -48,10 +48,12 @@ fun CoachApp(model: CoachViewModel = viewModel()) {
                         onYourCrib = { model.startDrill(youDeal = true) },
                         onTheirCrib = { model.startDrill(youDeal = false) },
                         onFullGame = model::showGameMenu,
+                        onProfile = model::showProfile,
                         onSettings = model::showSettings,
                     )
                     Phase.GAME_MENU -> GameMenuScreen(state, model::newGame, model::continueGame, model::toMenu)
-                    Phase.SETTINGS -> SettingsScreen(state, model::setFace, model::setBack, model::toMenu)
+                    Phase.PROFILE -> ProfileScreen(state, model::toMenu)
+                    Phase.SETTINGS -> SettingsScreen(state, model::setFace, model::setBack, model::resetStats, model::toMenu)
                     Phase.CUT -> CutScreen(state, model::deal)
                     Phase.DISCARD -> DiscardScreen(state, model::toggle, model::throwCards)
                     Phase.REVIEW -> ReviewScreen(state, model::cutStarter)

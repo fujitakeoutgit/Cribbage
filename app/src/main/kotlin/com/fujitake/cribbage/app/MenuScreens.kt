@@ -61,7 +61,13 @@ private fun MenuRow(
 }
 
 @Composable
-fun MenuScreen(onYourCrib: () -> Unit, onTheirCrib: () -> Unit, onFullGame: () -> Unit, onSettings: () -> Unit) {
+fun MenuScreen(
+    onYourCrib: () -> Unit,
+    onTheirCrib: () -> Unit,
+    onFullGame: () -> Unit,
+    onProfile: () -> Unit,
+    onSettings: () -> Unit,
+) {
     Column(Modifier.fillMaxSize().padding(20.dp)) {
         Spacer(Modifier.weight(1f))
         Eyebrow("Coach", color = Ink.Accent)
@@ -71,7 +77,8 @@ fun MenuScreen(onYourCrib: () -> Unit, onTheirCrib: () -> Unit, onFullGame: () -
         MenuRow(1, "Your crib", "Practice a hand as the dealer", onClick = onYourCrib)
         MenuRow(2, "Their crib", "Practice a hand as the non-dealer", onClick = onTheirCrib)
         MenuRow(3, "Full game", "Play the computer to $GAME_TARGET", onClick = onFullGame)
-        MenuRow(4, "Settings", "Card colors and styles", onClick = onSettings)
+        MenuRow(4, "Profile", "Your rating, accuracy and progress", onClick = onProfile)
+        MenuRow(5, "Settings", "Card colors, styles and stats reset", onClick = onSettings)
         Spacer(Modifier.weight(0.4f))
     }
 }
@@ -138,8 +145,54 @@ private fun <T> ChipGrid(options: List<T>, render: @Composable (T, Modifier) -> 
     }
 }
 
+/** Erasing stats takes two taps, so a stray tap can't wipe your history. */
 @Composable
-fun SettingsScreen(ui: UiState, onFace: (FaceStyle) -> Unit, onBack: (BackStyle) -> Unit, onDone: () -> Unit) {
+private fun ResetStats(hands: Int, onReset: () -> Unit) {
+    var confirming by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(14.dp)
+    val enabled = hands > 0
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.4f)
+            .border(1.dp, if (confirming) Ink.Red else Ink.Hairline, shape)
+            .clickable(enabled = enabled) {
+                if (confirming) {
+                    confirming = false
+                    onReset()
+                } else {
+                    confirming = true
+                }
+            }
+            .padding(16.dp),
+    ) {
+        Txt(
+            if (confirming) "Tap again to erase" else "Reset stats",
+            size = 16,
+            weight = FontWeight.SemiBold,
+            color = if (enabled) Ink.Red else Ink.Muted,
+        )
+        Txt(
+            when {
+                !enabled -> "No stats yet"
+                confirming -> "This erases $hands ${if (hands == 1) "hand" else "hands"} and resets your rating to 1000."
+                else -> "Erase your rating and hand history. Your saved game and card styles stay."
+            },
+            Modifier.padding(top = 2.dp),
+            size = 13,
+            color = Ink.Muted,
+        )
+    }
+}
+
+@Composable
+fun SettingsScreen(
+    ui: UiState,
+    onFace: (FaceStyle) -> Unit,
+    onBack: (BackStyle) -> Unit,
+    onReset: () -> Unit,
+    onDone: () -> Unit,
+) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
         BackLink(onDone)
         Txt("Settings", Modifier.padding(top = 8.dp, bottom = 20.dp), size = 32, family = Mono, weight = FontWeight.Light)
@@ -160,5 +213,8 @@ fun SettingsScreen(ui: UiState, onFace: (FaceStyle) -> Unit, onBack: (BackStyle)
         ChipGrid(BackStyle.entries) { back, modifier ->
             StyleChip(back.label, back.color, back == ui.back, modifier) { onBack(back) }
         }
+
+        Eyebrow("Stats", Modifier.padding(top = 26.dp, bottom = 10.dp))
+        ResetStats(ui.performance.records.size, onReset)
     }
 }

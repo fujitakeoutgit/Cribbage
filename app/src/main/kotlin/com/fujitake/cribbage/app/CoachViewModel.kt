@@ -12,7 +12,9 @@ import com.fujitake.cribbage.engine.DiscardReport
 import com.fujitake.cribbage.engine.DiscardTables
 import com.fujitake.cribbage.engine.GameScore
 import com.fujitake.cribbage.engine.HandLoss
+import com.fujitake.cribbage.engine.HandRecord
 import com.fujitake.cribbage.engine.HandResult
+import com.fujitake.cribbage.engine.Performance
 import com.fujitake.cribbage.engine.Match
 import com.fujitake.cribbage.engine.PeggingState
 import com.fujitake.cribbage.engine.PerfectPlay
@@ -30,7 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-enum class Phase { MENU, GAME_MENU, SETTINGS, CUT, DISCARD, REVIEW, PEGGING, SHOW, SUMMARY, FINAL }
+enum class Phase { MENU, GAME_MENU, PROFILE, SETTINGS, CUT, DISCARD, REVIEW, PEGGING, SHOW, SUMMARY, FINAL }
 
 enum class Mode { DRILL, FULL_GAME }
 
@@ -57,6 +59,9 @@ data class UiState(
     val saved: SavedGame? = null,
     val face: FaceStyle = FaceStyle.IVORY,
     val back: BackStyle = BackStyle.GRAPHITE,
+    val performance: Performance = Performance(emptyList()),
+    /** Your rating before the hand just finished, for showing the change. */
+    val ratingBefore: Double? = null,
 ) {
     val fullGame: Boolean get() = mode == Mode.FULL_GAME
     val gameOver: Boolean get() = fullGame && result?.scores?.any { it >= com.fujitake.cribbage.engine.GAME_TARGET } == true
@@ -71,10 +76,17 @@ class CoachViewModel(app: Application) : AndroidViewModel(app) {
     /** The running task for the current hand, stopped if you leave for the menu. */
     private var work: Job? = null
 
+    private var performance = Performance(store.records())
+
     private val _ui = MutableStateFlow(menuState())
     val ui: StateFlow<UiState> = _ui
 
-    private fun menuState() = UiState(saved = store.savedGame, face = store.face, back = store.back)
+    private fun menuState() = UiState(
+        saved = store.savedGame,
+        face = store.face,
+        back = store.back,
+        performance = performance,
+    )
 
     private fun launchWork(block: suspend CoroutineScope.() -> Unit) {
         work = viewModelScope.launch(block = block)
@@ -88,6 +100,15 @@ class CoachViewModel(app: Application) : AndroidViewModel(app) {
     fun showGameMenu() = _ui.update { it.copy(phase = Phase.GAME_MENU, saved = store.savedGame) }
 
     fun showSettings() = _ui.update { it.copy(phase = Phase.SETTINGS) }
+
+    fun showProfile() = _ui.update { it.copy(phase = Phase.PROFILE, performance = performance) }
+
+    /** Erases the hand history and so the rating. The saved game and card styles stay. */
+    fun resetStats() {
+        store.clearRecords()
+        performance = Performance(emptyList())
+        _ui.update { it.copy(performance = performance) }
+    }
 
     fun setFace(face: FaceStyle) {
         store.face = face
@@ -261,6 +282,12 @@ class CoachViewModel(app: Application) : AndroidViewModel(app) {
         val state = _ui.value
         val loss = HandLoss(state.report?.pointsLost ?: 0.0, state.plays.sumOf { it.pointsLost })
         val history = state.history + loss
+        val ratingBefore = performance.rating
+        state.report?.let { report ->
+            val record = HandRecord.from(report, state.plays, state.fullGame, game.youDeal, System.currentTimeMillis())
+            store.addRecord(record)
+            performance = Performance(performance.records + record)
+        }
         if (state.fullGame) {
             store.savedGame = if (match.winner != null) {
                 null
@@ -274,6 +301,8 @@ class CoachViewModel(app: Application) : AndroidViewModel(app) {
                 history = history,
                 phase = if (result.counts.isEmpty()) Phase.SUMMARY else Phase.SHOW,
                 busy = false,
+                performance = performance,
+                ratingBefore = ratingBefore,
             )
         }
     }

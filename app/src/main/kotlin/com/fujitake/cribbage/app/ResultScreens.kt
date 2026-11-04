@@ -28,11 +28,14 @@ import com.fujitake.cribbage.engine.COMPUTER
 import com.fujitake.cribbage.engine.Card
 import com.fujitake.cribbage.engine.GAME_TARGET
 import com.fujitake.cribbage.engine.GameScore
+import com.fujitake.cribbage.engine.Grade
 import com.fujitake.cribbage.engine.HandCount
 import com.fujitake.cribbage.engine.HandResult
+import com.fujitake.cribbage.engine.PlayReport
 import com.fujitake.cribbage.engine.YOU
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private const val COUNT_BEAT_MS = 800L
 
@@ -149,7 +152,8 @@ fun SummaryScreen(ui: UiState, onNext: () -> Unit, onMenu: () -> Unit) {
                 .padding(20.dp),
         ) {
             Eyebrow("Hand ${ui.handNumber} · Summary")
-            if (ui.fullGame) ScoreStrip(result.scores, Modifier.padding(top = 14.dp))
+            RatingBlock(ui, givenUp, report.grade, graded)
+            if (ui.fullGame) ScoreStrip(result.scores, Modifier.padding(top = 18.dp))
             Row(Modifier.padding(top = 14.dp).fillMaxWidth()) {
                 BigTotal("You", result.totals[YOU], Modifier.weight(0.3f))
                 BigTotal("Computer", result.totals[COMPUTER], Modifier.weight(0.7f))
@@ -179,6 +183,30 @@ fun SummaryScreen(ui: UiState, onNext: () -> Unit, onMenu: () -> Unit) {
             Modifier.padding(20.dp),
             onClick = onNext,
         )
+    }
+}
+
+/** Your running skill rating and how this hand moved it. */
+@Composable
+private fun RatingBlock(ui: UiState, givenUp: Double, discardGrade: Grade, graded: List<PlayReport>) {
+    val after = ui.performance.rating
+    val before = ui.ratingBefore ?: after
+    val top = (if (discardGrade == Grade.BEST) 1 else 0) + graded.count { it.grade == Grade.BEST }
+    Column(Modifier.padding(top = 14.dp)) {
+        Eyebrow("Skill rating")
+        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom) {
+            Txt("${after.roundToInt()}", size = 44, family = Mono, weight = FontWeight.Light, lineHeight = 50)
+            Column(Modifier.padding(start = 12.dp, bottom = 8.dp)) {
+                RatingDelta(after.roundToInt() - before.roundToInt())
+            }
+        }
+        Txt(
+            "This hand: ${points(givenUp)} points given up · $top of ${1 + graded.size} top choices",
+            Modifier.padding(top = 4.dp),
+            size = 14,
+            color = Ink.Muted,
+        )
+        Txt("Your average: ${points(ui.performance.averageLost)}", size = 14, color = Ink.Muted)
     }
 }
 
